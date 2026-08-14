@@ -230,10 +230,10 @@
     </div>
 
     <div class="contour" aria-hidden="true">
-      <svg viewBox="0 0 780 60" xmlns="http://www.w3.org/2000/svg">
-        <path stroke="#DDE2D5" d="M0,30 C130,10 150,50 260,30 C370,10 390,50 500,30 C610,10 630,50 780,30" />
-        <path stroke="#9CB08F" d="M0,38 C130,18 150,58 260,38 C370,18 390,58 500,38 C610,18 630,58 780,38" opacity="0.6" />
-        <path stroke="#C9A78D" d="M0,22 C130,2 150,42 260,22 C370,2 390,42 500,22 C610,2 630,42 780,22" opacity="0.5" />
+      <svg id="contourSvg" viewBox="0 0 780 60" xmlns="http://www.w3.org/2000/svg">
+        <path id="wave1" stroke="#DDE2D5" />
+        <path id="wave2" stroke="#9CB08F" opacity="0.6" />
+        <path id="wave3" stroke="#C9A78D" opacity="0.5" />
       </svg>
     </div>
   </section>
@@ -421,6 +421,63 @@
     <div class="note">Durrës, Albania — Technical Support &amp; Embedded Systems Specialist.</div>
   </div>
 </footer>
+<script>
+(function(){
+  const svg = document.getElementById('contourSvg');
+  if(!svg) return;
+  const width = 780, points = 60;
+  const waves = [
+    { el: document.getElementById('wave1'), amp: 20, freq: 2, phase: 0,   baseY: 30 },
+    { el: document.getElementById('wave2'), amp: 20, freq: 2, phase: 1.4, baseY: 38 },
+    { el: document.getElementById('wave3'), amp: 20, freq: 2, phase: 2.8, baseY: 22 }
+  ];
+
+  function buildPath(amp, freq, phase, baseY){
+    let d = '';
+    for(let i = 0; i <= points; i++){
+      const x = (width / points) * i;
+      const y = baseY + amp * 0.5 * Math.sin((x / width) * Math.PI * 2 * freq + phase);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    }
+    return d.trim();
+  }
+
+  function render(shift){
+    waves.forEach(w => w.el.setAttribute('d', buildPath(w.amp, w.freq, w.phase + shift, w.baseY)));
+  }
+
+  // сигмоїда: повільно -> швидко -> повільно
+  function sigmoidEase(t){
+    const k = 10;
+    const raw = 1 / (1 + Math.exp(-k * (t - 0.5)));
+    const s0 = 1 / (1 + Math.exp(k * 0.5));
+    const s1 = 1 / (1 + Math.exp(-k * 0.5));
+    return (raw - s0) / (s1 - s0);
+  }
+
+  let currentShift = 0;
+  let animating = false;
+  render(currentShift);
+
+  svg.style.cursor = 'pointer';
+  svg.addEventListener('click', function(){
+    if(animating) return;
+    animating = true;
+    const startShift = currentShift;
+    const targetShift = currentShift + Math.PI * 2;
+    const duration = 1800;
+    const startTime = performance.now();
+
+    function tick(now){
+      const t = Math.min((now - startTime) / duration, 1);
+      currentShift = startShift + (targetShift - startShift) * sigmoidEase(t);
+      render(currentShift);
+      if(t < 1){ requestAnimationFrame(tick); } else { animating = false; }
+    }
+    requestAnimationFrame(tick);
+  });
+})();
+</script>
 
 </body>
 </html>
